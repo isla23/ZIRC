@@ -1,2 +1,11 @@
 # Exclude Monitor's output log
 *.json
+
+# CPP Compile OBJ
+*.obj
+*.exp
+*.dll
+*.lib
+
+# Scons
+.sconsign.dblite
