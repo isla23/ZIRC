@@ -1,0 +1,15 @@
+{
+    "OFFSET_get_gameObject": 18775600,
+    "OFFSET_SetActive": 18798240,
+    "OFFSET_Destroy": 18909536,
+    "OFFSET_InitGunInfo": 44477472,
+    "OFFSET_Spot_Show": 38756848,
+    "OFFSET_Spot_Finish1": 38744928,
+    "OFFSET_Spot_Finish2": 38744560,
+    "OFFSET_Turn_PlayEnd": 33002944,
+    "OFFSET_Turn_ToGK": 33003472,
+    "OFFSET_Turn_ToSF": 33004224,
+    "OFFSET_Turn_Disact": 33002464,
+    "OFFSET_Turn_IsPlay": 33002688,
+    "OFFSET_MoveCamera": 31360880
+}

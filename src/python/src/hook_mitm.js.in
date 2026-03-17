@@ -1,16 +1,12 @@
-// tools/hack/trimmer/merged/hook_mitm.js
-
-// =============================================================
-// GLOBAL HELPER & DEFINITIONS (From Reward Gun Logic)
-// =============================================================
+// tools/hack/trimmer/merged/hook_mitm.js.in
 
 // --- Game Logic API (Reward Gun) ---
-var addr_InitGunInfo    = 5437312;  // CommonGetNewGunController$$InitGunInfo
+var addr_InitGunInfo    = @OFFSET_InitGunInfo@;
 
 // --- Unity Engine API (Reward Gun) ---
-var addr_get_gameObject = 16465776; // UnityEngine.Component$$get_gameObject
-var addr_SetActive      = 16488416; // UnityEngine.GameObject$$SetActive
-var addr_Destroy        = 16599120; // UnityEngine.Object$$Destroy
+var addr_get_gameObject = @OFFSET_get_gameObject@;
+var addr_SetActive      = @OFFSET_SetActive@;
+var addr_Destroy        = @OFFSET_Destroy@;
 
 function getModuleBase(name) {
     var mod = Process.findModuleByName(name);
@@ -24,10 +20,8 @@ function hook() {
         return;
     }
 
-    // Helper definition for compatibility with Script B code style
     var NULL = ptr(0);
-
-    send({ type: "info", payload: "[JS] Injecting MERGED Hooks (Reward Gun + Turn End)..." });
+    send({ type: "info", payload: "[JS] Injecting MERGED Hooks..." });
 
     // =============================================================
     // PART 1: REWARD GUN HOOK (Zero-Frame UI Annihilator)
@@ -96,9 +90,9 @@ function hook() {
         // ==========================================
         // Module I : Spot Animation
         // ==========================================
-        var addr_Spot_Show   = gameAssembly.add(30831600); // DeploymentSpotController$$ShowTurnEndAnima
-        var addr_Spot_Finish1 = gameAssembly.add(30819680); // DeploymentSpotController$$OnFinishAnimation
-        var addr_Spot_Finish2 = gameAssembly.add(30819312); // DeploymentSpotController$$OnFinishAnimationEvent
+        var addr_Spot_Show    = gameAssembly.add(@OFFSET_Spot_Show@); 
+        var addr_Spot_Finish1 = gameAssembly.add(@OFFSET_Spot_Finish1@); 
+        var addr_Spot_Finish2 = gameAssembly.add(@OFFSET_Spot_Finish2@); 
         
         var spotFinish1 = new NativeFunction(addr_Spot_Finish1, 'void', ['pointer', 'pointer']);
         var spotFinish2 = new NativeFunction(addr_Spot_Finish2, 'void', ['pointer', 'pointer']);
@@ -118,11 +112,11 @@ function hook() {
         // ==========================================
         // Module II : Turn Animation
         // ==========================================
-        var addr_Turn_PlayEnd = gameAssembly.add(25400800); // DeploymentTurnAnimationController$$PlayChangeTurnEndAnime
-        var addr_Turn_ToGK    = gameAssembly.add(25401328); // DeploymentTurnAnimationController$$ToGKTurn
-        var addr_Turn_ToSF    = gameAssembly.add(25402080); // DeploymentTurnAnimationController$$ToSFTurn
-        var addr_Turn_Disact  = gameAssembly.add(25400320); // DeploymentTurnAnimationController$$DisactiveMain
-        var addr_Turn_IsPlay  = gameAssembly.add(25400544); // DeploymentTurnAnimationController$$IsPlaying
+        var addr_Turn_PlayEnd = gameAssembly.add(@OFFSET_Turn_PlayEnd@); 
+        var addr_Turn_ToGK    = gameAssembly.add(@OFFSET_Turn_ToGK@); 
+        var addr_Turn_ToSF    = gameAssembly.add(@OFFSET_Turn_ToSF@); 
+        var addr_Turn_Disact  = gameAssembly.add(@OFFSET_Turn_Disact@); 
+        var addr_Turn_IsPlay  = gameAssembly.add(@OFFSET_Turn_IsPlay@); 
 
         var turnDisactive = new NativeFunction(addr_Turn_Disact, 'void', ['pointer', 'pointer']);
 
@@ -132,7 +126,7 @@ function hook() {
             addr_Turn_IsPlay.writeByteArray([0x31, 0xC0, 0xC3]); // xor eax, eax; ret
         } catch (e) {}
 
-        // Hijack callback：stop playback, and DisactiveMain is called instantly
+        // Hijack callback: stop playback, and DisactiveMain is called instantly
         var turnAnimFastForward = new NativeCallback(function(__this, method) {
             try {
                 turnDisactive(__this, NULL);
@@ -151,7 +145,7 @@ function hook() {
         // ==========================================
         // Module III : Zero-Duration Camera
         // ==========================================
-        var addr_MoveCamera = gameAssembly.add(24073760); // DeploymentController$$TriggerMoveCameraEvent
+        var addr_MoveCamera = gameAssembly.add(@OFFSET_MoveCamera@); 
         var original_MoveCamera = new NativeFunction(addr_MoveCamera, 'void', 
             ['pointer', 'uint64', 'uint8', 'float', 'float', 'uint8', 'uint8', 'float', 'pointer', 'pointer']);
 
