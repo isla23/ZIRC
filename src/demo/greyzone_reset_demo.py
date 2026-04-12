@@ -9,7 +9,7 @@ from gflzirc import (
 CONFIG = {
     "USER_UID": "_InputYourID_",
     "SIGN_KEY": DEFAULT_SIGN,
-    "BASE_URL": SERVERS["M4A1"],
+    "BASE_URL": SERVERS["RO635"],
     "PROXY_PORT": 8080
 }
 
@@ -29,6 +29,9 @@ def on_traffic(event_type: str, url: str, data: dict):
         print("[!] Then type '-g' to auto-reset GreyZone.")
 
 def check_step_error(resp: dict, step_name: str) -> bool:
+    if not isinstance(resp, dict):
+        print(f"[-] {step_name} Error: Server returned invalid format.")
+        return True
     if "error_local" in resp:
         print(f"[-] {step_name} Local Error: {resp['error_local']}")
         return True
@@ -37,28 +40,108 @@ def check_step_error(resp: dict, step_name: str) -> bool:
         return True
     return False
 
-def check_greyzone_conditions(resp: dict) -> bool:
-    status = resp.get("daily_status_with_user_info", {})
-    # Priority 1: Check if respawn(initial) spot_id is 138(RightUpper)
-    if str(status.get("spot_id")) != "138":
-        return False
-        
-    map_list = resp.get("daily_map_with_user_info", [])
-    # Convert list to dict for faster spot lookup
-    spots = {str(spot.get("spot_id")): spot.get("mission", "") for spot in map_list}
-    
-    # Priority 2: Check spot 136(Right Mountain) mission prefix
+# ==========================================
+# Strategy Group Definitions
+# ==========================================
+
+def is_vehicle_mission(mission: str) -> bool:
+    # Vehicle missions
+    valid_missions = ["1:550501,2:550005", "1:550001,2:550505"]
+    return mission in valid_missions
+
+def is_mountain_mission(mission: str) -> bool:
+    # Mountain mission
+    return mission.startswith("1:521018,2:")
+
+def check_strategy_1(spots: dict) -> bool:
+    # Strategy 1: Right Mountain (136) + vehicle (127)
+    # Right mountain (136)
+    # Right vehicle (127)
     mission_136 = spots.get("136", "")
-    if not mission_136.startswith("1:521018,2:"):
-        return False
-        
-    # Priority 3: Check spot 127(Vehicle) exact mission match
     mission_127 = spots.get("127", "")
-    valid_127_missions = ["1:550501,2:550005", "1:550001,2:550505"]
-    if mission_127 not in valid_127_missions:
-        return False
+    
+    if not is_mountain_mission(mission_136): return False
+    if not is_vehicle_mission(mission_127): return False
         
     return True
+
+def check_strategy_2(spots: dict) -> bool:
+    # Strategy 2: 4 Vehicles (127, 104, 84)
+    # Right vehicle (127)
+    # Mid vehicle (104)
+    # Boss vehicle (84)
+    # Left vehicle (78) ignored
+    mission_127 = spots.get("127", "")
+    mission_104 = spots.get("104", "")
+    mission_84  = spots.get("84", "")
+    
+    if not is_vehicle_mission(mission_127): return False
+    if not is_vehicle_mission(mission_104): return False
+    if not is_vehicle_mission(mission_84): return False
+    
+    return True
+
+def check_strategy_3(spots: dict) -> bool:
+    # Strategy 3: Left Mountain (121) + 3 Vehicles (104, 84)
+    # Left mountain (121)
+    # Mid vehicle (104)
+    # Boss vehicle (84)
+    # Left vehicle (78) ignored
+    mission_121 = spots.get("121", "")
+    mission_104 = spots.get("104", "")
+    mission_84  = spots.get("84", "")
+    
+    if not is_mountain_mission(mission_121): return False
+    if not is_vehicle_mission(mission_104): return False
+    if not is_vehicle_mission(mission_84): return False
+    
+    return True
+
+# ==========================================
+# Main Checker Function
+# ==========================================
+
+def check_greyzone_conditions(resp: dict) -> bool:
+    status = resp.get("daily_status_with_user_info", {})
+    map_list = resp.get("daily_map_with_user_info", [])
+    
+    respawn_spot = str(status.get("spot_id"))
+    spots = {str(spot.get("spot_id")): spot.get("mission", "") for spot in map_list}
+    
+    # Priority 1: Check if respawn(initial) spot_id is 138 (RightUpper)
+    if respawn_spot != "138":
+        return False
+
+    # Pre-fetch key nodes for logging
+    m136 = spots.get("136", "None")
+    m127 = spots.get("127", "None")
+    m121 = spots.get("121", "None")
+    m104 = spots.get("104", "None")
+    m84  = spots.get("84", "None")
+    m78  = spots.get("78", "None")
+    
+    print(f"    [P1] Respawn Spot = {respawn_spot}")
+    print(f"    [Map] 136(RM)={m136} | 127(RV)={m127} | 121(LM)={m121}")
+    print(f"    [Map] 104(MV)={m104} | 84(BV)={m84} | 78(Opt)={m78}")
+    
+    # Strategy Group Evaluation (OR Logic)
+    if check_strategy_1(spots):
+        print("    [+] Matched Strategy 1: Right Mountain + Vehicle")
+        return True
+        
+    if check_strategy_2(spots):
+        print("    [+] Matched Strategy 2: Right 4 Vehicles")
+        return True
+        
+    if check_strategy_3(spots):
+        print("    [+] Matched Strategy 3: Left Mountain + 3 Vehicles")
+        return True
+        
+    return False
+
+# ==========================================
+# Worker & Application Logic
+# ==========================================
 
 def greyzone_reset_worker():
     global stop_macro_flag, worker_mode, current_worker_thread
